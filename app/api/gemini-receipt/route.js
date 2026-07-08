@@ -76,7 +76,11 @@ export async function POST(request) {
     };
 
     const url =
-      https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)};
+  'https://generativelanguage.googleapis.com/v1beta/models/' +
+  encodeURIComponent(model) +
+  ':generateContent?key=' +
+  encodeURIComponent(apiKey);
+
 
     const res = await fetch(url, {
       method: 'POST',
