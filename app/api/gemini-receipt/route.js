@@ -20,33 +20,36 @@ export async function POST(request) {
       );
     }
 
-    const prompt = Чи Монголын ebarimt болон дэлгүүрийн баримт уншдаг санхүүгийн OCR туслах. Зурагнаас мэдээлэл уншаад ЗӨВХӨН JSON буцаа. Markdown битгий бич.
-
-Schema:
-{
-  "type": "expense",
-  "amount": number|null,
-  "date": "YYYY-MM-DD"|null,
-  "merchant": string|null,
-  "category": string,
-  "description": string,
-  "confidence": number,
-  "rawTextSummary": string
-}
-
-Ангилал:
-- Хүнс
-- Тээвэр
-- Кафе/Хоол
-- Шатахуун
-- Утас/Интернэт
-- Эрүүл мэнд
-- Түрээс
-- Бусад зарлага
-
-Нийт төлөх дүнг amount болго.
-Огноо байхгүй бол null.
-Дүн байхгүй бол null.;
+    const prompt = [
+      'Чи Монголын ebarimt болон дэлгүүрийн баримт уншдаг санхүүгийн OCR туслах.',
+      'Зурагнаас мэдээлэл уншаад ЗӨВХӨН JSON буцаа.',
+      'Markdown битгий бич.',
+      '',
+      'JSON schema:',
+      '{',
+      '  "type": "expense",',
+      '  "amount": number эсвэл null,',
+      '  "date": "YYYY-MM-DD" эсвэл null,',
+      '  "merchant": string эсвэл null,',
+      '  "category": string,',
+      '  "description": string,',
+      '  "confidence": number,',
+      '  "rawTextSummary": string',
+      '}',
+      '',
+      'Ангилал сонгох дүрэм:',
+      '- CU, GS25, Emart, Nomin, supermarket, market бол Хүнс',
+      '- Petrovis, Shunkhlai, fuel, gas station бол Шатахуун',
+      '- Mobicom, Unitel, Skytel, интернет бол Утас/Интернэт',
+      '- taxi, bus, UBCab бол Тээвэр',
+      '- pharmacy, эм, hospital, clinic бол Эрүүл мэнд',
+      '- restaurant, cafe, coffee, хоол бол Кафе/Хоол',
+      '- тодорхойгүй бол Бусад зарлага',
+      '',
+      'Нийт төлөх дүнг amount болго.',
+      'Огноо байхгүй бол null болго.',
+      'Дүн байхгүй бол null болго.'
+    ].join('\n');
 
     const payload = {
       contents: [
@@ -104,5 +107,4 @@ Schema:
     try {
       json = JSON.parse(text);
     } catch {
-      json = JSON.parse(text.replace(/
-
+      const cleaned = text.replace(/
