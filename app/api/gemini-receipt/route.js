@@ -1,7 +1,7 @@
 export async function POST(request) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
     if (!apiKey) {
       return Response.json(
@@ -11,7 +11,8 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { base64, mimeType } = body;
+    const base64 = body.base64;
+    const mimeType = body.mimeType || 'image/jpeg';
 
     if (!base64) {
       return Response.json(
@@ -22,7 +23,7 @@ export async function POST(request) {
 
     const prompt = [
       'Чи Монголын ebarimt болон дэлгүүрийн баримт уншдаг санхүүгийн OCR туслах.',
-      'Зурагнаас мэдээлэл уншаад ЗӨВХӨН JSON буцаа.',
+      'Зурагнаас мэдээлэл уншаад зөвхөн JSON буцаа.',
       'Markdown битгий бич.',
       '',
       'JSON schema:',
@@ -58,7 +59,7 @@ export async function POST(request) {
           parts: [
             {
               inlineData: {
-                mimeType: mimeType || 'image/jpeg',
+                mimeType: mimeType,
                 data: base64
               }
             },
@@ -76,11 +77,10 @@ export async function POST(request) {
     };
 
     const url =
-  'https://generativelanguage.googleapis.com/v1beta/models/' +
-  encodeURIComponent(model) +
-  ':generateContent?key=' +
-  encodeURIComponent(apiKey);
-
+      'https://generativelanguage.googleapis.com/v1beta/models/' +
+      encodeURIComponent(model) +
+      ':generateContent?key=' +
+      encodeURIComponent(apiKey);
 
     const res = await fetch(url, {
       method: 'POST',
@@ -90,26 +90,41 @@ export async function POST(request) {
       body: JSON.stringify(payload)
     });
 
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json().catch(function () {
+      return {};
+    });
 
     if (!res.ok) {
       return Response.json(
         {
-          error: data?.error?.message || 'Gemini API error ' + res.status,
- 
+          error: data && data.error && data.error.message
+            ? data.error.message
+            : 'Gemini API error ' + res.status,
           detail: data
         },
         { status: res.status }
       );
     }
 
-    const text = (data.candidates?.[0]?.content?.parts || [])
-      .map((p) => p.text || '')
+    const parts =
+      data &&
+      data.candidates &&
+      data.candidates[0] &&
+      data.candidates[0].content &&
+      data.candidates[0].content.parts
+        ? data.candidates[0].content.parts
+        : [];
+
+    const text = parts
+      .map(function (part) {
+        return part.text || '';
+      })
       .join('\n');
 
     let json;
 
     try {
       json = JSON.parse(text);
-    } catch {
-      const cleaned = text.replace(/
+    } catch (error) {
+      const cleaned = text
+        .split('
