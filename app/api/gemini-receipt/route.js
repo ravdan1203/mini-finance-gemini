@@ -1,61 +1,63 @@
 export async function POST(request) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 
     if (!apiKey) {
       return Response.json(
-        { error: 'GEMINI_API_KEY тохируулаагүй байна' },
+        { error: "GEMINI_API_KEY тохируулаагүй байна" },
         { status: 500 }
       );
     }
 
     const body = await request.json();
     const base64 = body.base64;
-    const mimeType = body.mimeType || 'image/jpeg';
+    const mimeType = body.mimeType || "image/jpeg";
 
     if (!base64) {
       return Response.json(
-        { error: 'base64 image байхгүй байна' },
+        { error: "base64 image байхгүй байна" },
         { status: 400 }
       );
     }
 
-    const prompt = [
-      'Чи Монголын ebarimt болон дэлгүүрийн баримт уншдаг санхүүгийн OCR туслах.',
-      'Зурагнаас мэдээлэл уншаад зөвхөн JSON буцаа.',
-      'Markdown битгий бич.',
-      '',
-      'JSON schema:',
-      '{',
-      '  "type": "expense",',
-      '  "amount": number эсвэл null,',
-      '  "date": "YYYY-MM-DD" эсвэл null,',
-      '  "merchant": string эсвэл null,',
-      '  "category": string,',
-      '  "description": string,',
-      '  "confidence": number,',
-      '  "rawTextSummary": string',
-      '}',
-      '',
-      'Ангилал сонгох дүрэм:',
-      '- CU, GS25, Emart, Nomin, supermarket, market бол Хүнс',
-      '- Petrovis, Shunkhlai, fuel, gas station бол Шатахуун',
-      '- Mobicom, Unitel, Skytel, интернет бол Утас/Интернэт',
-      '- taxi, bus, UBCab бол Тээвэр',
-      '- pharmacy, эм, hospital, clinic бол Эрүүл мэнд',
-      '- restaurant, cafe, coffee, хоол бол Кафе/Хоол',
-      '- тодорхойгүй бол Бусад зарлага',
-      '',
-      'Нийт төлөх дүнг amount болго.',
-      'Огноо байхгүй бол null болго.',
-      'Дүн байхгүй бол null болго.'
-    ].join('\n');
+    const promptLines = [
+      "Чи Монголын ebarimt болон дэлгүүрийн баримт уншдаг санхүүгийн OCR туслах.",
+      "Зурагнаас мэдээлэл уншаад зөвхөн JSON буцаа.",
+      "Markdown битгий бич.",
+      "",
+      "JSON schema:",
+      "{",
+      "  \"type\": \"expense\",",
+      "  \"amount\": number эсвэл null,",
+      "  \"date\": \"YYYY-MM-DD\" эсвэл null,",
+      "  \"merchant\": string эсвэл null,",
+      "  \"category\": string,",
+      "  \"description\": string,",
+      "  \"confidence\": number,",
+      "  \"rawTextSummary\": string",
+      "}",
+      "",
+      "Ангилал сонгох дүрэм:",
+      "CU, GS25, Emart, Nomin, supermarket, market бол Хүнс.",
+      "Petrovis, Shunkhlai, fuel, gas station бол Шатахуун.",
+      "Mobicom, Unitel, Skytel, интернет бол Утас/Интернэт.",
+      "taxi, bus, UBCab бол Тээвэр.",
+      "pharmacy, эм, hospital, clinic бол Эрүүл мэнд.",
+      "restaurant, cafe, coffee, хоол бол Кафе/Хоол.",
+      "Тодорхойгүй бол Бусад зарлага.",
+      "",
+      "Нийт төлөх дүнг amount болго.",
+      "Огноо байхгүй бол null болго.",
+      "Дүн байхгүй бол null болго."
+    ];
+
+    const prompt = promptLines.join("\n");
 
     const payload = {
       contents: [
         {
-          role: 'user',
+          role: "user",
           parts: [
             {
               inlineData: {
@@ -72,20 +74,20 @@ export async function POST(request) {
       generationConfig: {
         temperature: 0.1,
         maxOutputTokens: 1024,
-        responseMimeType: 'application/json'
+        responseMimeType: "application/json"
       }
     };
 
     const url =
-      'https://generativelanguage.googleapis.com/v1beta/models/' +
+      "https://generativelanguage.googleapis.com/v1beta/models/" +
       encodeURIComponent(model) +
-      ':generateContent?key=' +
+      ":generateContent?key=" +
       encodeURIComponent(apiKey);
 
     const res = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'content-type': 'application/json'
+        "content-type": "application/json"
       },
       body: JSON.stringify(payload)
     });
@@ -95,36 +97,59 @@ export async function POST(request) {
     });
 
     if (!res.ok) {
+      let message = "Gemini API error " + res.status;
+      if (data && data.error && data.error.message) {
+        message = data.error.message;
+      }
+
       return Response.json(
         {
-          error: data && data.error && data.error.message
-            ? data.error.message
-            : 'Gemini API error ' + res.status,
+          error: message,
           detail: data
         },
         { status: res.status }
       );
     }
 
-    const parts =
+    let parts = [];
+    if (
       data &&
       data.candidates &&
       data.candidates[0] &&
       data.candidates[0].content &&
       data.candidates[0].content.parts
-        ? data.candidates[0].content.parts
-        : [];
+    ) {
+      parts = data.candidates[0].content.parts;
+    }
 
     const text = parts
       .map(function (part) {
-        return part.text || '';
+        return part.text || "";
       })
-      .join('\n');
+      .join("\n");
 
     let json;
 
     try {
       json = JSON.parse(text);
-    } catch (error) {
+    } catch (parseError) {
+      const fence = String.fromCharCode(96) + String.fromCharCode(96) + String.fromCharCode(96);
       const cleaned = text
-        .split('
+        .split(fence + "json").join("")
+        .split(fence).join("")
+        .trim();
+
+      json = JSON.parse(cleaned);
+    }
+
+    return Response.json({
+      json: json,
+      raw: text
+    });
+  } catch (error) {
+    return Response.json(
+      { error: error.message || "Server error" },
+      { status: 500 }
+    );
+  }
+}
