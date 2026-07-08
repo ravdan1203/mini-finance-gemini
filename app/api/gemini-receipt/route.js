@@ -1,7 +1,7 @@
 export async function POST(request) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 
     if (!apiKey) {
       return Response.json(
@@ -95,7 +95,8 @@ export async function POST(request) {
     if (!res.ok) {
       return Response.json(
         {
-          error: data?.error?.message || Gemini API error ${res.status},
+          error: data?.error?.message || 'Gemini API error ' + res.status,
+ 
           detail: data
         },
         { status: res.status }
