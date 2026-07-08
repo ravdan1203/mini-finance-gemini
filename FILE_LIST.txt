@@ -1,0 +1,11 @@
+Upload these to GitHub:
+
+package.json
+.env.example
+README.md
+app/layout.js
+app/globals.css
+app/page.js
+app/api/gemini-receipt/route.js
+
+Do NOT upload .env.local.
