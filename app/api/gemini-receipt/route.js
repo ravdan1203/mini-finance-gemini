@@ -133,10 +133,9 @@ export async function POST(request) {
     try {
       json = JSON.parse(text);
     } catch (parseError) {
-      const fence = String.fromCharCode(96) + String.fromCharCode(96) + String.fromCharCode(96);
       const cleaned = text
-        .split(fence + "json").join("")
-        .split(fence).join("")
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
         .trim();
 
       json = JSON.parse(cleaned);
