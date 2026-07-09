@@ -2,7 +2,7 @@ export async function POST(request) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     // Энд 'models/' гэж бичих шаардлагагүй, зөвхөн моделийн нэрээ бичнэ
-    const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
     if (!apiKey) {
       return Response.json(
