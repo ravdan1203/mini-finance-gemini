@@ -1,6 +1,7 @@
 export async function POST(request) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
+    // Энд 'models/' гэж бичих шаардлагагүй, зөвхөн моделийн нэрээ бичнэ
     const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
 
     if (!apiKey) {
@@ -78,11 +79,9 @@ export async function POST(request) {
       }
     };
 
-    const url =
-      "https://generativelanguage.googleapis.com/v1beta/models/" +
-      encodeURIComponent(model) +
-      ":generateContent?key=" +
-      encodeURIComponent(apiKey);
+    // Энд код өөрөө 'models/' гэдгийг URL-д нэмж байгаа учраас 
+    // хувьсагч дээр давхардуулах хэрэггүй.
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
     const res = await fetch(url, {
       method: "POST",
