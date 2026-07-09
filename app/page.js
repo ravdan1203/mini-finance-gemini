@@ -111,6 +111,8 @@ export default function Page() {
 
   function saveEdit(e) {
     e.preventDefault();
+    
+    // 1. Гүйлгээг хадгалах логик
     setTransactions(function (prev) {
       return prev.map(function (t) {
         if (t.id === edit.id) {
@@ -119,8 +121,25 @@ export default function Page() {
         return t;
       });
     });
-    setPage("transactions");
+
+    // 2. FORM ЦЭВЭРЛЭХ (Энэ хэсэг таны хүссэнээр ажиллана)
+    setEdit({
+      id: "",
+      type: "expense",
+      amount: "",
+      date: today(),
+      merchant: "",
+      category: "Бусад зарлага",
+      description: ""
+    });
+    setPreview(""); // Зургийн preview-г арилгана
+    setRaw("");     // Raw JSON-ыг арилгана
+    setStatus("Зураг оруулна уу"); // Статусыг анхны байдалд нь оруулна
+
+    // 3. Хуудас солих (Та Dashboard руу эсвэл дахин баримт оруулах хуудас руу үсэрч болно)
+    setPage("dashboard"); 
   }
+
 
   async function handleReceipt(file) {
     if (!file) return;
