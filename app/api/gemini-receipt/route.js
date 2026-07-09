@@ -1,21 +1,38 @@
 export async function POST(request) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
+    // ТАНИЙ АЛДАА: gemini-3.5 гэж байхгүй. 2.0 эсвэл 1.5 ашиглана.
     const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
     if (!apiKey) {
-      return Response.json({ error: "API Key олдсонгүй" }, { status: 500 });
+      return Response.json({ error: "GEMINI_API_KEY тохируулаагүй байна" }, { status: 500 });
     }
 
     const body = await request.json();
     const { base64, mimeType = "image/jpeg" } = body;
 
+    if (!base64) {
+      return Response.json({ error: "base64 image байхгүй байна" }, { status: 400 });
+    }
+
+    const promptLines = [
+      "Чи Монголын ebarimt болон дэлгүүрийн баримт уншдаг санхүүгийн OCR туслах.",
+      "Зурагнаас мэдээлэл уншаад зөвхөн JSON буцаа.",
+      "Markdown битгий бич. Зөвхөн цэвэр JSON өг.",
+      "JSON schema: { \"type\": \"expense\", \"amount\": number|null, \"date\": \"YYYY-MM-DD\"|null, \"merchant\": string|null, \"category\": string, \"description\": string, \"confidence\": number, \"rawTextSummary\": string }",
+      "Ангилал сонгох: CU, GS25, Emart, Nomin, supermarket -> Хүнс; Petrovis, fuel -> Шатахуун; Mobicom, Unitel -> Утас/Интернэт; taxi, bus -> Тээвэр; pharmacy -> Эрүүл мэнд; restaurant, coffee -> Кафе/Хоол; Бусад."
+    ];
+
     const payload = {
-      contents: [{ role: "user", parts: [{ inlineData: { mimeType, data: base64 } }, { text: "JSON-оор хариул." }] }],
-      generationConfig: { responseMimeType: "application/json" }
+      contents: [{ role: "user", parts: [{ inlineData: { mimeType, data: base64 } }, { text: promptLines.join("\n") }] }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 1024,
+        responseMimeType: "application/json"
+      }
     };
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
     const res = await fetch(url, {
       method: "POST",
@@ -23,27 +40,27 @@ export async function POST(request) {
       body: JSON.stringify(payload)
     });
 
-    // 1. Хариултыг JSON-оор биш, текстээр авна
-    const responseText = await res.text();
+    const data = await res.json().catch(() => ({}));
 
-    // 2. Хэрэв API-аас 200 (OK) хариулт ирээгүй бол яг юу ирснийг лог дээр хэвлэ
     if (!res.ok) {
-      console.error("API Error Response:", responseText);
-      return Response.json({ error: "Gemini API failed", detail: responseText }, { status: res.status });
+      return Response.json({ error: "Gemini API error", detail: data }, { status: res.status });
     }
 
-    // 3. Зөвхөн амжилттай үед JSON-оор парс хийнэ
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    // Найдвартай JSON парс хийх хэсэг
+    let json;
     try {
-      const data = JSON.parse(responseText);
-      const text = data.candidates[0].content.parts[0].text;
-      return Response.json({ json: JSON.parse(text) });
+      // Markdown-г арилгаад, {}-ээс гаднахыг хаяж зөвхөн JSON-оо авна
+      const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      json = JSON.parse(match ? match[0] : cleaned);
     } catch (parseError) {
-      console.error("Parse Error:", responseText); // Энд алдаа гарвал юу болсныг харна
-      return Response.json({ error: "JSON парс хийхэд алдаа гарлаа", detail: responseText }, { status: 500 });
+      return Response.json({ error: "JSON хөрвүүлэлтийн алдаа", raw: text }, { status: 500 });
     }
 
+    return Response.json({ json, raw: text });
   } catch (error) {
-    console.error("Server Error:", error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: error.message || "Server error" }, { status: 500 });
   }
 }
